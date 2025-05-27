@@ -1,6 +1,6 @@
 # 成绩管理系统
 
-![image](https://github.com/pahhcn/ScoreMaster/raw/main/README.assets/image.png)
+![image](https://github.com/maoshengai/north/raw/main/src/assets/image.png)
 
 ## 一、项目概述
 
