@@ -19,7 +19,7 @@ const app = createApp(App)
 
 app.use(createPinia())
 app.use(router)
-app.use(ArcoVue) // 注册 Arco 组件库
-app.use(ElementPlus) // 注册 Element Plus 组件库
+app.use(ArcoVue) 
+app.use(ElementPlus)
 
 app.mount('#app')

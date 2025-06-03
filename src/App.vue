@@ -49,6 +49,9 @@ function onLoginSuccess() {
           <a-menu-item key="/score-query">
             <RouterLink to="/score-query">成绩查询</RouterLink>
           </a-menu-item>
+          <a-menu-item key="/score-sort">
+            <RouterLink to="/score-sort">排序字段</RouterLink>
+          </a-menu-item>
           <a-menu-item key="/add-score">
             <RouterLink to="/add-score">添加成绩</RouterLink>
           </a-menu-item>

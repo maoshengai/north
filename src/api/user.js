@@ -49,59 +49,174 @@ function mapRow(row) {
 }
 
 export default (db) => {
-  // 查询所有成绩（支持模糊、排序、筛选）
-  router.get('/scores', (req, res) => {
-    const { name, sort, order = 'desc', subject, min, max } = req.query
-    let sql = 'SELECT * FROM scores WHERE 1=1'
-    const params = []
+  // // 查询所有成绩（支持模糊、排序、筛选）
+  // router.get('/scores', (req, res) => {
+  //   const { name, sort, order = 'desc', subject, min, max } = req.query
+  //   let sql = 'SELECT * FROM scores WHERE 1=1'
+  //   const params = []
 
-    if (name) {
-      sql += ' AND 姓名 LIKE ?'
-      params.push(`%${name}%`)
-    }
-    if (subject && min) {
-      sql += ` AND \`${subject}\` >= ?`
+  //   if (name) {
+  //     sql += ' AND 姓名 LIKE ?'
+  //     params.push(`%${name}%`)
+  //   }
+  //   if (subject && min) {
+  //     sql += ` AND \`${subject}\` >= ?`
+  //     params.push(Number(min))
+  //   }
+  //   if (subject && max) {
+  //     sql += ` AND \`${subject}\` <= ?`
+  //     params.push(Number(max))
+  //   }
+  //   if (sort) {
+  //     sql += ` ORDER BY \`${sort}\` ${order.toUpperCase()}`
+  //   }
+
+  //   db.query(sql, params, (err, results) => {
+  //     if (err) {
+  //       console.error(err)
+  //       return res.status(500).send([])
+  //     }
+  //     // 字段映射
+  //     const mappedResults = results.map(mapRow)
+  //     res.send(mappedResults)
+  //   })
+  // })
+// 查询所有成绩（支持模糊、排序、筛选，含动态计算 total/avg）
+router.get('/scores', (req, res) => {
+  const { name, sort, order = 'desc', subject, min, max } = req.query
+  let sql = 'SELECT * FROM scores WHERE 1=1'
+  const params = []
+
+  if (name) {
+    sql += ' AND 姓名 LIKE ?'
+    params.push(`%${name}%`)
+  }
+
+  if (subject) {
+    const subjectCN = Object.keys(keyMap).find(key => keyMap[key] === subject)
+    if (subjectCN && min) {
+      sql += ` AND \`${subjectCN}\` >= ?`
       params.push(Number(min))
     }
-    if (subject && max) {
-      sql += ` AND \`${subject}\` <= ?`
+    if (subjectCN && max) {
+      sql += ` AND \`${subjectCN}\` <= ?`
       params.push(Number(max))
     }
-    if (sort) {
-      sql += ` ORDER BY \`${sort}\` ${order.toUpperCase()}`
+  }
+
+  db.query(sql, params, (err, results) => {
+    if (err) {
+      console.error(err)
+      return res.status(500).send([])
     }
 
-    db.query(sql, params, (err, results) => {
-      if (err) {
-        console.error(err)
-        return res.status(500).send([])
-      }
-      // 字段映射
-      const mappedResults = results.map(mapRow)
-      res.send(mappedResults)
-    })
-  })
-
-  // 查询某学生各科成绩、总分、平均分
-  router.get('/scores/:xh', (req, res) => {
-    const xh = req.params.xh
-    db.query('SELECT * FROM scores WHERE 学号 = ?', [xh], (err, results) => {
-      if (err) return res.status(500).send([])
-      if (!results.length) return res.send([])
-      const row = mapRow(results[0])
-      // 统计
+    // 映射字段并计算 total / avg
+    const mappedResults = results.map(row => {
+      const newRow = mapRow(row)
       let total = 0, count = 0
-      for (const key in row) {
-        if (!['xh', 'name', 'total', 'avg'].includes(key) && typeof row[key] === 'number') {
-          total += row[key]
+
+      for (const key in newRow) {
+        if (!['xh', 'name'].includes(key)) {
+          const score = convertGradeToScore(newRow[key])
+          if (!isNaN(score)) {
+            total += score
+            count++
+          }
+        }
+      }
+
+      newRow.total = total
+      newRow.avg = count ? parseFloat((total / count).toFixed(2)) : 0
+      return newRow
+    })
+
+    // 排序支持动态字段
+    let finalResults = mappedResults
+    if (sort) {
+      finalResults = [...mappedResults].sort((a, b) => {
+        const aVal = a[sort]
+        const bVal = b[sort]
+        if (aVal == null) return 1
+        if (bVal == null) return -1
+        return order === 'asc' ? aVal - bVal : bVal - aVal
+      })
+    }
+
+    res.send(finalResults)
+  })
+})
+
+
+
+
+  // // 查询某学生各科成绩、总分、平均分
+  // router.get('/scores/:xh', (req, res) => {
+  //   const xh = req.params.xh
+  //   db.query('SELECT * FROM scores WHERE 学号 = ?', [xh], (err, results) => {
+  //     if (err) return res.status(500).send([])
+  //     if (!results.length) return res.send([])
+  //     const row = mapRow(results[0])
+  //     // 统计
+  //     let total = 0, count = 0
+  //     for (const key in row) {
+  //       if (!['xh', 'name', 'total', 'avg'].includes(key) && typeof row[key] === 'number') {
+  //         total += row[key]
+  //         count++
+  //       }
+  //     }
+  //     row.total = total
+  //     row.avg = count ? (total / count).toFixed(2) : 0
+  //     res.send([row])
+  //   })
+  // })
+
+// 文字成绩转分数
+function convertGradeToScore(val) {
+  if (typeof val === 'number') return val
+  const gradeMap = {
+    '优秀': 90,
+    '良好': 80,
+    '中等': 70,
+    '及格': 60,
+    '不及格': 50
+  }
+  return gradeMap[val] ?? NaN 
+}
+
+router.get('/scores/:xh', (req, res) => {
+  const xh = req.params.xh
+  db.query('SELECT * FROM scores WHERE 学号 = ?', [xh], (err, results) => {
+    if (err) return res.status(500).send([])
+    if (!results.length) return res.send([])
+
+    const row = mapRow(results[0]) 
+    let total = 0, count = 0
+
+    for (const key in row) {
+      if (!['xh', 'name', 'total', 'avg'].includes(key)) {
+        const score = convertGradeToScore(row[key])
+        if (!isNaN(score)) {
+          total += score
           count++
         }
       }
-      row.total = total
-      row.avg = count ? (total / count).toFixed(2) : 0
-      res.send([row])
-    })
+    }
+
+    row.total = total
+    row.avg = count ? (total / count).toFixed(2) : 0
+
+    res.send([row])
   })
+})
+
+
+
+
+
+
+
+
+
 
   // 添加成绩
   router.post('/scores', (req, res) => {

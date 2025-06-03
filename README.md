@@ -94,7 +94,19 @@
 
 ## 八、使用说明
 
-1. 克隆项目代码：
+
    ```bash
-   git clone https://github.com/your-repo/score-management-system.git
-   cd score-management-system
+   #克隆项目代码：
+   git clone https://github.com/pahhcn/ScoreMaster.git
+   cd ScoreMaster
+   #命令行窗口运行
+   node server.js
+   #命令行窗口运行
+   npm run dev
+   ```
+
+
+
+
+统计总分/加权总分（忽略合格课程，仅计算可转换为分数的课程）
+为每位学生生成总成绩或GPA预估

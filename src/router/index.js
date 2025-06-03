@@ -48,6 +48,11 @@ const router = createRouter({
       name: 'edit-score',
       component: () => import('../views/EditScoreView.vue'),
     },
+    {
+      path: '/score-sort',
+      name: 'score-sort',
+      component: () => import('../views/ScoreSortView.vue'),
+    },
   ],
 })
 
